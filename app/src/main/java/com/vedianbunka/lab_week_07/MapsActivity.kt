@@ -2,6 +2,7 @@ package com.vedianbunka.lab_week_07
 
 import android.Manifest.permission.ACCESS_FINE_LOCATION
 import android.content.pm.PackageManager
+import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -9,6 +10,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.LocationServices
 
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -53,6 +55,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             }
             }
+    }
+
+    //A google play location service which helps us interact with Google's Fused Location Provider API
+    //The API intelligently provides us with the device location information
+    private val fusedLocationProviderClient by lazy {
+        LocationServices.getFusedLocationProviderClient(this)
     }
 
     /**
@@ -102,6 +110,31 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             .create().show()
     }
     private fun getLastLocation() {
-        Log.d("MapsActivity", "getLastLocation() called.")
+        if (hasLocationPermission()) {
+            try {
+                fusedLocationProviderClient.lastLocation
+                    .addOnSuccessListener { location: Location? ->
+                        location?.let {
+                            val userLocation = LatLng(location.latitude,
+                                location.longitude)
+                            updateMapLocation(userLocation)
+                            addMarkerAtLocation(userLocation)
+                        }
+                    }
+            } catch (e: SecurityException) {
+                Log.e("MapsActivity", "SecurityException: ${e.message}")
+            }
+        } else {
+// If permission was rejected
+            requestPermissionLauncher.launch(ACCESS_FINE_LOCATION)
+        }
+    }
+    private fun updateMapLocation(location: LatLng) {
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+            location, 7f))
+    }
+    private fun addMarkerAtLocation(location: LatLng) {
+        mMap.addMarker(MarkerOptions().title("You")
+            .position(location))
     }
 }
